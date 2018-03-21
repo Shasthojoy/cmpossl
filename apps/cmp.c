@@ -3556,10 +3556,10 @@ static int setup_request_ctx(CMP_CTX *ctx, ENGINE *e) {
         OPENSSL_cleanse(opt_keypass, strlen(opt_keypass));
         opt_keypass = NULL;
     }
-
     if (opt_revreason > CRL_REASON_NONE)
         (void)CMP_CTX_set_option(ctx, CMP_CTX_OPT_REVOCATION_REASON,
                                  opt_revreason);
+
     return 1;
 
  oom:
@@ -4157,8 +4157,11 @@ int cmp_main(int argc, char **argv)
             opt_issuer = opt_str("issuer");
             break;
         case OPT_DAYS:
-            if (!opt_int(opt_arg(), &opt_days))
+            if (!opt_int(opt_arg(), &opt_days) || opt_days < 0) {
+                BIO_printf(bio_err,
+                        "error: days must be a non-negative integer.\n");
                 goto opt_err;
+            }
             break;
         case OPT_REQEXTS:
             opt_reqexts = opt_str("reqexts");
@@ -4205,8 +4208,14 @@ int cmp_main(int argc, char **argv)
             opt_oldcert = opt_str("oldcert");
             break;
         case OPT_REVREASON:
-            if (!opt_int(opt_arg(), &opt_revreason))
+            if (!opt_int(opt_arg(), &opt_revreason) ||
+                    opt_revreason < CRL_REASON_NONE ||
+                    opt_revreason > CRL_REASON_AA_COMPROMISE ||
+                    opt_revreason == 7) {
+                BIO_printf(bio_err,
+                        "error: invalid revreason. Valid values are -1..6, 8..10.\n");
                 goto opt_err;
+            }
             break;
 
         case OPT_OWNFORM:
